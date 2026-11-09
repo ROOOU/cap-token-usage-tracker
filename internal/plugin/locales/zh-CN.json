@@ -201,6 +201,8 @@
   "result.success": "成功",
   "result.failed": "失败",
   "result.failedHttp": "失败（HTTP {status}）",
+  "result.miss": "请求未命中",
+  "result.hit": "请求命中",
   "cache.hit": "命中",
   "cache.miss": "未命中",
   "value.unavailable": "不可用",

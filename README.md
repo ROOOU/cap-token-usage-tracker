@@ -144,6 +144,7 @@ plugins:
 | `response_compression` | `true` | 客户端支持 gzip 时压缩公共仪表盘 HTML 和 JSON 响应；管理接口保持未压缩 |
 | `response_compression_min_bytes` | `1024` | 启用 gzip 的最小响应字节数，范围 0-16777216 |
 | `full_mode_session_ttl_minutes` | `15` | 完整模式会话有效期（分钟），范围 1-1440；令牌只保存在页面内存，刷新、关闭页面或重启插件后需要重新鉴权 |
+| `default_full_mode` | `true` | 默认开启完整模式；设为 `false` 时默认显示普通模式并需通过管理密钥鉴权进入完整模式 |
 
 示例中的 `api_key_secret` 只是占位符，部署时必须替换。含 `#`、`:`、`{}` 等特殊字符的值应使用 YAML 引号包裹；长度按 UTF-8 字节计算。该密钥会保存在 CLIProxyAPI 配置中，因此应限制配置文件权限，避免提交到公开仓库，也不要与数据库备份一起分发。
 
@@ -251,7 +252,7 @@ X-Full-Mode-Session: <session-token>
 | `GET` | `/v0/management/plugins/cap-token-usage-tracker/backup` | 下载数据库备份 |
 | `POST` | `/v0/management/plugins/cap-token-usage-tracker/restore` | 恢复数据库 |
 
-统计、逐请求和费用接口支持 `range`，或 `start` 与 `end`，以及 `source` 等筛选参数。完整模式还支持重复的 `api_key_ref`，多个值按并集筛选；逐请求接口另支持 `offset`、`limit`、`model` 和 `result`。`/stats/groups` 另支持 `offset`、`limit`、`sort`、`direction`、`model` 和重复的 `exclude_model`；每页最多 500 条。统计和维度统计中的 `Groups` 行不按失败状态拆分：同一 provider、executor、model、alias、source、API key、auth type、service tier 和 reasoning effort 只有一行；`failed`/`failure_status` 在这些行中恒为 `false`/`0`，失败次数由 `failed_requests` 承载，逐请求状态保留在 `/requests`。
+统计、逐请求和费用接口支持 `range`，或 `start` 与 `end`，以及 `source` 等筛选参数。完整模式还支持重复的 `api_key_ref`，多个值按并集筛选；逐请求接口另支持 `offset`、`limit`、`model` 和 `result`（支持 `success`、`failed`、`miss` 请求未命中、`hit` 请求命中）。`/stats/groups` 另支持 `offset`、`limit`、`sort`、`direction`、`model` 和重复的 `exclude_model`；每页最多 500 条。统计和维度统计中的 `Groups` 行不按失败状态拆分：同一 provider、executor、model、alias、source、API key、auth type、service tier 和 reasoning effort 只有一行；`failed`/`failure_status` 在这些行中恒为 `false`/`0`，失败次数由 `failed_requests` 承载，逐请求状态保留在 `/requests`。
 
 逐请求明细中的 TPS 以生成时间（`latency_ns - ttft_ns`）为分母。对 Gemini、Vertex、AI Studio、Antigravity 和 Interactions 等独立思考协议，分子为 `output_tokens + reasoning_tokens`；对 OpenAI 兼容、Anthropic 等已将 reasoning 计入 output 的协议，分子仍为 `output_tokens`。
 
@@ -458,6 +459,7 @@ plugins:
 | `response_compression` | `true` | Compress public dashboard HTML and JSON responses when the client supports gzip; management endpoints remain uncompressed |
 | `response_compression_min_bytes` | `1024` | Minimum response size in bytes before gzip is used, from 0 to 16777216 |
 | `full_mode_session_ttl_minutes` | `15` | Full-mode session lifetime in minutes, from 1 to 1440. The token stays only in page memory; refreshing, closing the page, or restarting the plugin requires authentication again |
+| `default_full_mode` | `true` | Enable full mode by default; set to `false` to require full-mode authentication from normal mode |
 
 The `api_key_secret` in the example is a placeholder and must be replaced for deployment. Quote YAML values containing special characters such as `#`, `:`, or `{}`; the minimum length is measured in UTF-8 bytes. The secret is stored in CLIProxyAPI configuration, so restrict access to that file, do not commit it to a public repository, and do not distribute it with database backups.
 

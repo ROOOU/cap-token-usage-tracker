@@ -31,6 +31,7 @@ type Config struct {
 	ResponseCompression         bool
 	ResponseCompressionMinBytes int
 	FullModeSessionTTLMinutes   int
+	DefaultFullMode             bool
 }
 
 type configYAML struct {
@@ -43,6 +44,7 @@ type configYAML struct {
 	ResponseCompression         *bool   `yaml:"response_compression"`
 	ResponseCompressionMinBytes *int    `yaml:"response_compression_min_bytes"`
 	FullModeSessionTTLMinutes   *int    `yaml:"full_mode_session_ttl_minutes"`
+	DefaultFullMode             *bool   `yaml:"default_full_mode"`
 }
 
 func defaultConfig() Config {
@@ -56,6 +58,7 @@ func defaultConfig() Config {
 		ResponseCompression:         defaultResponseCompression,
 		ResponseCompressionMinBytes: defaultResponseCompressionMinBytes,
 		FullModeSessionTTLMinutes:   defaultFullModeSessionTTLMinutes,
+		DefaultFullMode:             true,
 	}
 }
 
@@ -99,6 +102,9 @@ func parseConfig(raw []byte) (Config, error) {
 	}
 	if input.FullModeSessionTTLMinutes != nil {
 		cfg.FullModeSessionTTLMinutes = *input.FullModeSessionTTLMinutes
+	}
+	if input.DefaultFullMode != nil {
+		cfg.DefaultFullMode = *input.DefaultFullMode
 	}
 	return normalizeConfig(cfg)
 }

@@ -1262,6 +1262,8 @@ func TestDashboardLocalesCatalog(t *testing.T) {
 		"result.success",
 		"result.failed",
 		"result.failedHttp",
+		"result.miss",
+		"result.hit",
 	}
 	for _, code := range []string{"en", "zh-CN", "zh-TW", "ru"} {
 		data, err := localeFS.ReadFile("locales/" + code + ".json")

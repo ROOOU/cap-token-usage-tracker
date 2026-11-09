@@ -219,6 +219,9 @@ func (r *pluginRuntime) dispatchManagement(request pluginapi.ManagementRequest, 
 		if request.Method != "" && !strings.EqualFold(request.Method, http.MethodGet) {
 			return methodNotAllowed(http.MethodGet), nil
 		}
+		if r.config.DefaultFullMode && (request.Query.Get("mode") == "" || request.Query.Get("mode") == "full") {
+			return fullDashboardResponse(), nil
+		}
 		return dashboardResponse(), nil
 	case routes.fullDashboardPath:
 		if request.Method != "" && !strings.EqualFold(request.Method, http.MethodGet) {

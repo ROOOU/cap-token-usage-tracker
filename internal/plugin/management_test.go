@@ -181,6 +181,18 @@ func TestManagementStatsAndReset(t *testing.T) {
 	if err != nil || response.StatusCode != http.StatusOK || !strings.Contains(string(response.Body), `"total":0`) {
 		t.Fatalf("filtered resource requests response: %+v, %v", response, err)
 	}
+	requestsResultQuery.Set("result", "miss")
+	requestsResultRequest, _ = json.Marshal(pluginapi.ManagementRequest{Method: http.MethodGet, Path: runtime.routes.resourceRequestsPath, Query: requestsResultQuery})
+	response, err = runtime.handleManagement(requestsResultRequest)
+	if err != nil || response.StatusCode != http.StatusOK || !strings.Contains(string(response.Body), `"total":1`) {
+		t.Fatalf("miss filtered resource requests response: %+v, %v", response, err)
+	}
+	requestsResultQuery.Set("result", "hit")
+	requestsResultRequest, _ = json.Marshal(pluginapi.ManagementRequest{Method: http.MethodGet, Path: runtime.routes.resourceRequestsPath, Query: requestsResultQuery})
+	response, err = runtime.handleManagement(requestsResultRequest)
+	if err != nil || response.StatusCode != http.StatusOK || !strings.Contains(string(response.Body), `"total":0`) {
+		t.Fatalf("hit filtered resource requests response: %+v, %v", response, err)
+	}
 	requestsResultQuery.Set("result", "unknown")
 	requestsResultRequest, _ = json.Marshal(pluginapi.ManagementRequest{Method: http.MethodGet, Path: runtime.routes.resourceRequestsPath, Query: requestsResultQuery})
 	response, err = runtime.handleManagement(requestsResultRequest)
@@ -870,5 +882,52 @@ func TestDashboardPreferencesManagementSaveRoute(t *testing.T) {
 	saved = DashboardPreferences{}
 	if err := json.Unmarshal(response.Body, &saved); err != nil || saved.RequestPageSize != 75 || saved.DimensionPageSize != 100 || saved.TokenDisplayMode != "m" {
 		t.Fatalf("legacy stored preferences payload = %s, err = %v", response.Body, err)
+	}
+}
+
+func TestDashboardDefaultsToFullMode(t *testing.T) {
+	config := testConfig(t)
+	config.DefaultFullMode = true
+	store, err := openStore(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime := &pluginRuntime{
+		store:  store,
+		config: config,
+		routes: registeredRoutes{
+			pluginID:          "test",
+			dashboardPath:     "/v0/resource/plugins/test/dashboard",
+			fullDashboardPath: "/v0/resource/plugins/test/full-dashboard",
+			fullModeDataPath:  "/v0/resource/plugins/test/full-mode/data",
+		},
+	}
+	defer runtime.shutdown()
+
+	// 1. /dashboard defaults to fullDashboardHTML
+	req, _ := json.Marshal(pluginapi.ManagementRequest{Method: http.MethodGet, Path: runtime.routes.dashboardPath})
+	res, err := runtime.handleManagement(req)
+	if err != nil || res.StatusCode != http.StatusOK {
+		t.Fatalf("dashboard default response: %+v, %v", res, err)
+	}
+	if !strings.Contains(string(res.Body), `var fullModePage=true`) || !strings.Contains(string(res.Body), `id="pricingButton"`) {
+		t.Fatal("expected /dashboard to default to full mode dashboard")
+	}
+
+	// 2. /dashboard?mode=compact serves ordinary dashboard
+	reqCompact, _ := json.Marshal(pluginapi.ManagementRequest{Method: http.MethodGet, Path: runtime.routes.dashboardPath, Query: url.Values{"mode": []string{"compact"}}})
+	resCompact, err := runtime.handleManagement(reqCompact)
+	if err != nil || resCompact.StatusCode != http.StatusOK {
+		t.Fatalf("dashboard compact response: %+v, %v", resCompact, err)
+	}
+	if strings.Contains(string(resCompact.Body), `id="pricingButton"`) || !strings.Contains(string(resCompact.Body), `var fullModePage=false`) {
+		t.Fatal("expected /dashboard?mode=compact to serve ordinary dashboard")
+	}
+
+	// 3. /full-mode/data without session succeeds when DefaultFullMode=true
+	reqData, _ := json.Marshal(pluginapi.ManagementRequest{Method: http.MethodGet, Path: runtime.routes.fullModeDataPath})
+	resData, err := runtime.handleManagement(reqData)
+	if err != nil || resData.StatusCode != http.StatusOK {
+		t.Fatalf("full-mode data response without session: %+v, %v", resData, err)
 	}
 }

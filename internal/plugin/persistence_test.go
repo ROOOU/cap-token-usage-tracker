@@ -1875,3 +1875,77 @@ func TestQueryRequestsRecalculatesStoredSeparateReasoningTPS(t *testing.T) {
 		t.Fatalf("historical record must not gain a stream flag: %+v", item)
 	}
 }
+
+func TestRequestResultFilterMissAndHit(t *testing.T) {
+	config := testConfig(t)
+	config.SyncOnRecord = true
+	store, err := openStore(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	now := nowUTC()
+	base := Dimensions{Provider: "openai", Model: "gpt-4o", Source: "test"}
+	// 1. Success with cache hit
+	if err := store.Record(normalizedUsage{
+		Dimensions:  base,
+		RequestedAt: now.Add(-3 * time.Second),
+		Counters:    Counters{Requests: 1, InputTokens: 100, CacheReadTokens: 50, TotalTokens: 150},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// 2. Success with cache miss
+	if err := store.Record(normalizedUsage{
+		Dimensions:  base,
+		RequestedAt: now.Add(-2 * time.Second),
+		Counters:    Counters{Requests: 1, InputTokens: 100, CacheReadTokens: 0, TotalTokens: 100},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// 3. Failed request
+	failedDim := base
+	failedDim.Failed = true
+	failedDim.FailureStatus = 500
+	if err := store.Record(normalizedUsage{
+		Dimensions:  failedDim,
+		RequestedAt: now.Add(-1 * time.Second),
+		Counters:    Counters{Requests: 1, FailedRequests: 1},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	exactRange := usageRange{Name: "24h", Start: now.Add(-time.Hour)}
+	allPage, err := store.queryRequestPageByFilter(exactRange, 0, 100, "", usageFilter{}, "")
+	if err != nil || allPage.Total != 3 {
+		t.Fatalf("allPage: total=%d, err=%v", allPage.Total, err)
+	}
+
+	missPage, err := store.queryRequestPageByFilter(exactRange, 0, 100, "", usageFilter{}, "miss")
+	if err != nil || missPage.Total != 2 {
+		t.Fatalf("missPage: total=%d (want 2), err=%v", missPage.Total, err)
+	}
+	for _, item := range missPage.Items {
+		if item.CacheHit {
+			t.Fatalf("missPage contained item with CacheHit=true: %+v", item)
+		}
+	}
+
+	cacheMissPage, err := store.queryRequestPageByFilter(exactRange, 0, 100, "", usageFilter{}, "cache_miss")
+	if err != nil || cacheMissPage.Total != 2 {
+		t.Fatalf("cacheMissPage alias: total=%d (want 2), err=%v", cacheMissPage.Total, err)
+	}
+
+	hitPage, err := store.queryRequestPageByFilter(exactRange, 0, 100, "", usageFilter{}, "hit")
+	if err != nil || hitPage.Total != 1 {
+		t.Fatalf("hitPage: total=%d (want 1), err=%v", hitPage.Total, err)
+	}
+	if !hitPage.Items[0].CacheHit {
+		t.Fatalf("hitPage item has CacheHit=false: %+v", hitPage.Items[0])
+	}
+
+	_, err = store.queryRequestPageByFilter(exactRange, 0, 100, "", usageFilter{}, "invalid_filter")
+	if err == nil {
+		t.Fatal("expected error for invalid resultFilter")
+	}
+}

@@ -201,6 +201,8 @@
   "result.success": "Успешно",
   "result.failed": "Ошибка",
   "result.failedHttp": "Ошибка (HTTP {status})",
+  "result.miss": "Промах кэша",
+  "result.hit": "Попадание в кэш",
   "cache.hit": "Попадание",
   "cache.miss": "Промах",
   "value.unavailable": "Недоступно",

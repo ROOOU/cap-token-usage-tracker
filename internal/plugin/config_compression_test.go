@@ -13,6 +13,27 @@ func TestDefaultRetentionDays(t *testing.T) {
 	if config.FullModeSessionTTLMinutes != defaultFullModeSessionTTLMinutes {
 		t.Fatalf("default full-mode session TTL = %d minutes, want %d", config.FullModeSessionTTLMinutes, defaultFullModeSessionTTLMinutes)
 	}
+	if !config.DefaultFullMode {
+		t.Fatal("default config must enable DefaultFullMode")
+	}
+}
+
+func TestDefaultFullModeConfig(t *testing.T) {
+	config, err := parseConfig([]byte("default_full_mode: false\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.DefaultFullMode {
+		t.Fatal("expected DefaultFullMode to be false when configured false")
+	}
+
+	config, err = parseConfig([]byte("default_full_mode: true\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !config.DefaultFullMode {
+		t.Fatal("expected DefaultFullMode to be true when configured true")
+	}
 }
 
 func TestFullModeSessionTTLConfig(t *testing.T) {

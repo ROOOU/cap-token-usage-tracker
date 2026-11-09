@@ -201,6 +201,8 @@
   "result.success": "Success",
   "result.failed": "Failed",
   "result.failedHttp": "Failed (HTTP {status})",
+  "result.miss": "Cache miss",
+  "result.hit": "Cache hit",
   "cache.hit": "Hit",
   "cache.miss": "Miss",
   "value.unavailable": "Unavailable",

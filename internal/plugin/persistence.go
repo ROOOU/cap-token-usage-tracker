@@ -2963,8 +2963,8 @@ func (a *storeActor) queryRequests(queryRange usageRange, offset, limit int, mod
 	if limit < 1 || limit > maxRequestPageSize {
 		return RequestPage{}, withStatus(400, "limit must be between 1 and %d", maxRequestPageSize)
 	}
-	if resultFilter != "" && resultFilter != "success" && resultFilter != "failed" {
-		return RequestPage{}, withStatus(400, "result must be success or failed")
+	if resultFilter != "" && resultFilter != "success" && resultFilter != "failed" && resultFilter != "miss" && resultFilter != "cache_miss" && resultFilter != "unhit" && resultFilter != "hit" && resultFilter != "cache_hit" {
+		return RequestPage{}, withStatus(400, "result must be success, failed, miss, or hit")
 	}
 
 	resolver := newModelPriceResolver(a.modelPrices, a.priceSyncSettings)
@@ -3009,7 +3009,10 @@ func (a *storeActor) queryRequests(queryRange usageRange, offset, limit int, mod
 			if !filter.matches(item.Dimensions) {
 				continue
 			}
-			if (resultFilter == "success" && item.Failed) || (resultFilter == "failed" && !item.Failed) {
+			if (resultFilter == "success" && item.Failed) ||
+				(resultFilter == "failed" && !item.Failed) ||
+				((resultFilter == "miss" || resultFilter == "cache_miss" || resultFilter == "unhit") && item.CacheHit) ||
+				((resultFilter == "hit" || resultFilter == "cache_hit") && !item.CacheHit) {
 				continue
 			}
 			page.Total++

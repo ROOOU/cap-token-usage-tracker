@@ -87,6 +87,9 @@ func (r *pluginRuntime) createFullModeSession() (string, error) {
 
 func (r *pluginRuntime) validFullModeSession(raw string) bool {
 	raw = strings.TrimSpace(raw)
+	if r.config.DefaultFullMode && (raw == "" || raw == "default" || raw == "full-mode") {
+		return true
+	}
 	if raw == "" || len(raw) > 128 {
 		return false
 	}
@@ -134,6 +137,9 @@ func fullModeSessionFromRequest(request pluginapi.ManagementRequest) string {
 
 func fullModeSessionHash(raw string) ([32]byte, bool) {
 	raw = strings.TrimSpace(raw)
+	if raw == "default" || raw == "full-mode" || raw == "" {
+		return sha256.Sum256([]byte("default-full-mode-session")), true
+	}
 	if raw == "" || len(raw) > 128 {
 		return [32]byte{}, false
 	}
